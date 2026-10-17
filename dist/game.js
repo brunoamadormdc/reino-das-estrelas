@@ -42,16 +42,17 @@ function show(screen){['home','worlds','play'].forEach(n=>$('#'+n).classList.tog
 function clearInput(){Object.keys(input).forEach(k=>input[k]=k==='axis'?0:false);padMove=0;padJump=false;padFire=false;const knob=$('#stick');if(knob)knob.style.transform='translate(0,0)';$$('.held').forEach(b=>b.classList.remove('held'));wasJump=false}
 function tone(f=600,d=.08,type='sine',volume=.035){if(muted)return;try{ac??=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(volume,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch{}}
 $('#sound').onclick=()=>{soundChosen=true;muted=!muted;if(muted){try{speechSynthesis.cancel()}catch{}}$('#sound').textContent=muted?'♫':'♪';$('#sound').setAttribute('aria-label',muted?'Ativar som':'Desativar som');tone()};
-let immersive=false,immersivePreference=null,hadNativeFullscreen=false;
+let immersive=false,immersivePreference=null,hadNativeFullscreen=false,orientationLocked=false;
 function mobileLayout(){return !!window.matchMedia?.('(pointer: coarse)').matches||((navigator.maxTouchPoints||0)>0&&Math.min(window.innerWidth||800,window.innerHeight||600)<900)}
-function resizeGame(){W=immersive?Math.max(180,Math.min(1200,Math.round(H*(window.innerWidth||800)/(window.innerHeight||450)))):800;if(canvas.width!==W){canvas.width=W;ctx.imageSmoothingEnabled=false}if(state)state.camera=Math.max(0,Math.min(worlds[state.index].length-W+130,state.p.x-W*.34))}
-function enterImmersive(){if(!state)return;immersive=true;immersivePreference=true;document.body.classList.add('immersive');resizeGame();if(!document.fullscreenElement&&document.documentElement?.requestFullscreen){try{const result=document.documentElement.requestFullscreen();result?.catch?.(()=>{/* CSS viewport mode remains available. */})}catch{}}}
-function leaveImmersive(remember=true){if(remember)immersivePreference=false;immersive=false;document.body.classList.remove('immersive');resizeGame();if(document.fullscreenElement&&document.exitFullscreen){try{document.exitFullscreen()?.catch?.(()=>{})}catch{}}}
+function resizeGame(){const rotated=immersive&&mobileLayout()&&window.innerHeight>window.innerWidth;document.body.classList.toggle('landscape-fallback',rotated);W=immersive?Math.max(180,Math.min(1200,Math.round(H*(rotated?window.innerHeight/window.innerWidth:window.innerWidth/window.innerHeight)))):800;if(canvas.width!==W){canvas.width=W;ctx.imageSmoothingEnabled=false}if(state)state.camera=Math.max(0,Math.min(worlds[state.index].length-W+130,state.p.x-W*.34))}
+async function lockLandscape(){if(!immersive||!mobileLayout()||!screen.orientation?.lock)return;try{await screen.orientation.lock('landscape');if(immersive)orientationLocked=true;else screen.orientation.unlock?.();resizeGame()}catch{/* Rotated viewport remains usable when orientation lock is unavailable. */}}
+function enterImmersive(){if(!state)return;immersive=true;immersivePreference=true;document.body.classList.add('immersive');resizeGame();if(!document.fullscreenElement&&document.documentElement?.requestFullscreen){try{const result=document.documentElement.requestFullscreen();result?.then?.(lockLandscape).catch?.(()=>{/* CSS viewport mode remains available. */})}catch{}}else if(document.fullscreenElement)lockLandscape()}
+function leaveImmersive(remember=true){if(remember)immersivePreference=false;immersive=false;if(orientationLocked){screen.orientation.unlock?.();orientationLocked=false}document.body.classList.remove('immersive');resizeGame();if(document.fullscreenElement&&document.exitFullscreen){try{document.exitFullscreen()?.catch?.(()=>{})}catch{}}}
 $('#fullscreen').onclick=enterImmersive;
 $('#exitFullscreen').onclick=()=>leaveImmersive();
 $('#immersivePause').onclick=()=>pause();
 $('#immersiveSound').onclick=()=>{$('#sound').onclick();$('#immersiveSound').textContent=muted?'♫':'♪';$('#immersiveSound').setAttribute('aria-label',muted?'Ativar som':'Silenciar som')};
-window.addEventListener('resize',resizeGame);
+window.addEventListener('resize',resizeGame);window.addEventListener('orientationchange',resizeGame);
 document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement){hadNativeFullscreen=true;resizeGame()}else if(hadNativeFullscreen){hadNativeFullscreen=false;if(immersive)leaveImmersive()}});
 
 let musicNext=0,musicIndex=0;

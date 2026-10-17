@@ -1,4 +1,4 @@
-const CACHE_NAME = 'reino-das-estrelas-v2';
+const CACHE_NAME = 'reino-das-estrelas-v3';
 const FILES = ['./', 'index.html', 'style.css', 'game.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 const ASSETS = new Set(FILES.map(file => new URL(file, self.registration.scope).pathname));
 
